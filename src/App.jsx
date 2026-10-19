@@ -1,7 +1,5 @@
 import * as React from "react";
-import List from "@mui/material/List";
-import { API_URL } from "./API_URL";
-import axios from "axios";
+import { api } from "./API_URL";
 import CatListItem from "./components/CatListItem";
 import { styled, alpha } from "@mui/material/styles";
 import AppBar from "@mui/material/AppBar";
@@ -9,7 +7,6 @@ import Toolbar from "@mui/material/Toolbar";
 import InputBase from "@mui/material/InputBase";
 import SearchIcon from "@mui/icons-material/Search";
 import { Typography } from "@mui/material";
-import { flexbox } from "@mui/system";
 
 const Search = styled("div")(({ theme }) => ({
   position: "relative",
@@ -61,11 +58,18 @@ export default function App() {
     getAllBreeds();
   }, []);
 
+  const getWikiUrl = (breed) =>
+  breed.wikipedia_url ||
+  `https://en.wikipedia.org/w/index.php?search=${encodeURIComponent(
+    `${breed.name} cat`
+  )}`;
+
   const getAllBreeds = async () => {
     try {
-      const apiBreeds = await axios.get(`${API_URL}/breeds?limit=10`, {
+      const apiBreeds = await api.get(`/breeds`, {
         params: {
-          page,
+          limit: 10,
+          page
         },
       });
       const data = apiBreeds.data;
@@ -79,7 +83,7 @@ export default function App() {
 
   const setSearch = async (search) => {
     try {
-      let apiSearch = await axios.get(`${API_URL}/breeds/search`, {
+      let apiSearch = await api.get(`/breeds/search`, {
         params: {
           q: search,
         },
@@ -153,8 +157,9 @@ export default function App() {
           gridTemplateColumns: "1fr 1fr",
           gridRowGap: "1vw",
           gridColumnGap: "2vw",
-          height: "600px",
-          overflow: "scroll",
+          height: "100vh",
+          overflow: "auto",
+          boxSizing: "border-box",
           scrollbarWidth: "none",
         }}
       >
@@ -170,7 +175,7 @@ export default function App() {
             wimperial={breed.weight?.imperial}
             wmetric={breed.weight?.metric}
             lifespan={breed.life_span}
-            wikipedia={breed.wikipedia_url}
+            wikipedia={getWikiUrl(breed)}
           />
         ))}
       </div>
