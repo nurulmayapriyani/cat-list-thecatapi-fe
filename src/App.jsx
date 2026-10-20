@@ -6,7 +6,7 @@ import AppBar from "@mui/material/AppBar";
 import Toolbar from "@mui/material/Toolbar";
 import InputBase from "@mui/material/InputBase";
 import SearchIcon from "@mui/icons-material/Search";
-import { Typography } from "@mui/material";
+import { Typography, Box } from "@mui/material";
 
 const Search = styled("div")(({ theme }) => ({
   position: "relative",
@@ -16,11 +16,7 @@ const Search = styled("div")(({ theme }) => ({
     backgroundColor: alpha(theme.palette.common.white, 0.25),
   },
   marginLeft: 0,
-  width: "100%",
-  [theme.breakpoints.up("sm")]: {
-    marginLeft: theme.spacing(1),
-    width: "auto",
-  },
+  flexShrink: 0,
 }));
 
 const SearchIconWrapper = styled("div")(({ theme }) => ({
@@ -37,14 +33,16 @@ const StyledInputBase = styled(InputBase)(({ theme }) => ({
   color: "inherit",
   "& .MuiInputBase-input": {
     padding: theme.spacing(1, 1, 1, 0),
-    // vertical padding + font size from searchIcon
     paddingLeft: `calc(1em + ${theme.spacing(4)})`,
     transition: theme.transitions.create("width"),
-    width: "100%",
-    [theme.breakpoints.up("sm")]: {
-      width: "12ch",
+    width: "12ch",
+    "&:focus": {
+      width: "18ch",
+    },
+    [theme.breakpoints.up("md")]: {
+      width: "16ch",
       "&:focus": {
-        width: "20ch",
+        width: "24ch",
       },
     },
   },
@@ -59,22 +57,17 @@ export default function App() {
   }, []);
 
   const getWikiUrl = (breed) =>
-  breed.wikipedia_url ||
-  `https://en.wikipedia.org/w/index.php?search=${encodeURIComponent(
-    `${breed.name} cat`
-  )}`;
+    breed.wikipedia_url ||
+    `https://en.wikipedia.org/w/index.php?search=${encodeURIComponent(
+      `${breed.name} cat`
+    )}`;
 
   const getAllBreeds = async () => {
     try {
       const apiBreeds = await api.get(`/breeds`, {
-        params: {
-          limit: 10,
-          page
-        },
+        params: { limit: 10, page },
       });
-      const data = apiBreeds.data;
-      // console.log(getBreeds)
-      setGetBreeds(getBreeds.concat(data));
+      setGetBreeds(getBreeds.concat(apiBreeds.data));
       setPage(page + 1);
     } catch (err) {
       console.log(err);
@@ -83,10 +76,8 @@ export default function App() {
 
   const setSearch = async (search) => {
     try {
-      let apiSearch = await api.get(`/breeds/search`, {
-        params: {
-          q: search,
-        },
+      const apiSearch = await api.get(`/breeds/search`, {
+        params: { q: search },
       });
       setGetBreeds(apiSearch.data);
       if (!search) {
@@ -97,28 +88,18 @@ export default function App() {
     }
   };
 
-  const infiniteScroll = async (event) => {
-    console.log(event.target.offsetHeight);
-    console.log(event.target.scrollTop);
-    console.log(event.target.scrollHeight);
-
-    try {
-      if (
-        event.target.offsetHeight + event.target.scrollTop >=
-        event.target.scrollHeight
-      ) {
-        console.log("scroll to end");
-        getAllBreeds();
-      }
-    } catch (err) {
-      console.log(err);
+  const infiniteScroll = (event) => {
+    const { offsetHeight, scrollTop, scrollHeight } = event.currentTarget;
+    // 100px threshold: exact equality is unreliable on mobile/zoomed screens
+    if (offsetHeight + scrollTop >= scrollHeight - 100) {
+      getAllBreeds();
     }
   };
 
   return (
     <>
-      <AppBar position="fixed" style={{ backgroundColor: "#DA8260" }}>
-        <Toolbar>
+      <AppBar position="fixed" sx={{ backgroundColor: "#DA8260" }}>
+        <Toolbar sx={{ gap: 2 }}>
           <Search>
             <SearchIconWrapper>
               <SearchIcon />
@@ -128,43 +109,54 @@ export default function App() {
               inputProps={{ "aria-label": "search" }}
               onChange={(ev) => setSearch(ev.target.value)}
               type="text"
-            ></StyledInputBase>
+            />
           </Search>
           <Typography
-            variant="h6"
             noWrap
             component="div"
-            sx={{ paddingLeft: "60vw" }}
+            sx={{
+              ml: "auto",
+              minWidth: 0,
+              textAlign: "right",
+              fontWeight: 500,
+              fontSize: { xs: "0.85rem", sm: "1.1rem", md: "1.25rem" },
+              // Too cramped next to the search box on very small phones
+              display: { xs: "none", sm: "block" },
+            }}
           >
             "Home Is Where the Cat Is"
           </Typography>
         </Toolbar>
       </AppBar>
 
-      <div
+      <Box
         onScroll={infiniteScroll}
-        style={{
-          maxWidth: "100%",
+        sx={{
           backgroundColor: "#F4B9B8",
-          backgroundRepeat: "no-repeat",
-          backgroundAttachment: "fixed",
-          backgroundSize: "cover",
-          position: "relative",
-          paddingLeft: "3%",
-          paddingRight: "3%",
-          paddingTop: "7%",
           display: "grid",
-          gridTemplateColumns: "1fr 1fr",
-          gridRowGap: "1vw",
-          gridColumnGap: "2vw",
-          height: "100vh",
-          overflow: "auto",
+          // 1 column on phones, 2 on tablets/desktop, 3 on very wide screens
+          gridTemplateColumns: {
+            xs: "1fr",
+            md: "repeat(2, minmax(0, 1fr))",
+            xl: "repeat(3, minmax(0, 1fr))",
+          },
+          gap: { xs: 2, md: 3 },
+          height: "100dvh",
+          overflowY: "auto",
           boxSizing: "border-box",
+          px: { xs: 1.5, sm: 3, md: "3%" },
+          pt: { xs: 9, sm: 10 }, // clears the fixed AppBar (56px / 64px) + gap
+          pb: 3,
+          alignContent: "start",
+          // Without this, rows can shrink to fit the fixed container height
+          gridAutoRows: "max-content",
           scrollbarWidth: "none",
+          "&::-webkit-scrollbar": { display: "none" },
         }}
       >
         {getBreeds.map((breed) => (
           <CatListItem
+            key={breed.id}
             catname={breed.name}
             catid={breed.id}
             origin={breed.origin}
@@ -178,7 +170,7 @@ export default function App() {
             wikipedia={getWikiUrl(breed)}
           />
         ))}
-      </div>
+      </Box>
     </>
   );
 }
